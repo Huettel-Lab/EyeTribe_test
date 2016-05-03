@@ -63,7 +63,7 @@ import tobii.eye_tracking_io.eyetracker
 import tobii.eye_tracking_io.time.clock
 import tobii.eye_tracking_io.time.sync
 
-from tobii.eye_tracking_io.types import Point2D, Blob
+from tobii.eye_tracking_io.types import Point2D, Blob, GazeDataItem
 
 import psychopy.visual
 import psychopy.event
@@ -1872,9 +1872,11 @@ class TobiiController:
 		self.datafile.write('\t'.join(['TimeStamp',
 									   'GazePointXLeft',
 									   'GazePointYLeft',
+										'LeftPupil',
 									   'ValidityLeft',
 									   'GazePointXRight',
 									   'GazePointYRight',
+										'RightPupil',
 									   'ValidityRight',
 									   'GazePointX',
 									   'GazePointY',
@@ -1887,13 +1889,15 @@ class TobiiController:
 		for g in self.gazeData:
 			
 			# write timestamp and gaze position for both eyes to the datafile
-			self.datafile.write('%.1f\t%.4f\t%.4f\t%d\t%.4f\t%.4f\t%d'%(
+			self.datafile.write('%.1f\t%.4f\t%.4f\t%.4f\t%d\t%.4f\t%.4f\t%.4f\t%d'%(
 								(g.Timestamp-timeStampStart)/1000.0,
 								g.LeftGazePoint2D.x*self.disp.dispsize[0] if g.LeftValidity!=4 else -1.0,
 								g.LeftGazePoint2D.y*self.disp.dispsize[1] if g.LeftValidity!=4 else -1.0,
+								g.LeftPupil,
 								g.LeftValidity,
 								g.RightGazePoint2D.x*self.disp.dispsize[0] if g.RightValidity!=4 else -1.0,
 								g.RightGazePoint2D.y*self.disp.dispsize[1] if g.RightValidity!=4 else -1.0,
+								g.RightPupil,
 								g.RightValidity))
 			
 			# if no correct sample is available, data is missing
