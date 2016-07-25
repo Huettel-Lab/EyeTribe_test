@@ -97,32 +97,31 @@ def read_tobii(filename, start, stop=None, missing=0.0, debug=False):
 	starttime = 0
 	started = False
 	trialend = False
+
+	missing = -1.0
 	
-	# loop through all lines
-	for i in range(len(raw)):
-		
+	# loop through all lines from bottom, due to placement of tobii start and stop messages
+	for i in range(len(raw)-1, -1, -1):
+
 		# string to list
 		line = raw[i].replace('\n','').replace('\r','').split('\t')
 		
-		#print(line)
-		
 		# check if trial has already started
 		if started:
-			# only check for stop if there is one
-			if stop != None:
-				if (line[0] == 'MSG' and stop in line[3]) or i == len(raw)-1:
-					started = False
-					trialend = True
-			# check for new start otherwise
-			else:
-				if start in line:
-					started = True
-					trialend = True
+			if int(float(line[0])) < starttime and not line[1] == '':
+				started = False
+				trialend = True
 
 			# # # # #
 			# trial ending
 			
 			if trialend:
+				x.reverse()
+				y.reverse()
+				size.reverse()
+				time.reverse()
+				trackertime.reverse()
+
 				message("trialend %d; %d samples found" % (len(data),len(x)))
 				# trial dict
 				trial = {}
@@ -132,6 +131,7 @@ def read_tobii(filename, start, stop=None, missing=0.0, debug=False):
 				trial['time'] = numpy.array(time)
 				trial['trackertime'] = numpy.array(trackertime)
 				trial['events'] = copy.deepcopy(events)
+
 				# events
 				trial['events']['Sblk'], trial['events']['Eblk'] = blink_detection(trial['x'],trial['y'],trial['trackertime'],missing=missing)
 				trial['events']['Sfix'], trial['events']['Efix'] = fixation_detection(trial['x'],trial['y'],trial['trackertime'],missing=missing)
@@ -149,26 +149,18 @@ def read_tobii(filename, start, stop=None, missing=0.0, debug=False):
 				
 		# check if the current line contains start message
 		else:
-			#if line[0] == "MSG":
-			#if start in line[0]:
-				message("trialstart %d" % len(data))
-				# set started to True
-				started = True
-				# find starting time
-				#starttime = int(line[2])
+			if start in line:
+				starttime = int(float(line[0]))
+				started = True	
 		
 		# # # # #
 		# parse line
 		
 		if started:
-			# message lines will start with MSG, followed by a tab, then a
-			# timestamp, a tab, the time, a tab and the message, e.g.:
-			#	"MSG\t2014-07-01 17:02:33.770\t853589802\tsomething of importance here"
-			if line[0] == "MSG":
-				t = int(line[2]) # time
-				m = line[3] # message
-				events['msg'].append([t,m])
 			
+			# TODO: For the 'images', 'saccadometry', 'samplerate', and 'pupilometry' trials to be
+			# analyzed correctly, we must also parse the messages from the output file
+
 			# regular lines will contain tab separated values, beginning with
 			# a timestamp, follwed by the values that were asked to be stored
 			# in the data file. Usually, this comes down to
@@ -179,21 +171,20 @@ def read_tobii(filename, start, stop=None, missing=0.0, debug=False):
 			# '2014-07-01 17:02:33.770, 853589802, False, 7, 512.5897, 510.8104, 614.6975, 614.3327, 16.8657,
 			# 523.3592, 475.2756, 511.1529, 492.7412, 16.9398, 0.4037, 0.5209,
 			# 501.8202, 546.3453, 609.3405, 623.2287, 16.7916, 0.5539, 0.5209'
-			else:
-				#print(line)
-				# see if current line contains relevant data
-				try:
-					# extract data
-					x.append((float(line[1]) + float(line[5]))/2)
-					y.append((float(line[2]) + float(line[6]))/2)
-					size.append((float(line[3]) + float(line[7]))/2)
-					time.append(int(line[0])-starttime)
-					trackertime.append(int(line[0]))
-				except:
-					message("line '%s' could not be parsed" % line)
-					continue # skip this line	
+			
+			# see if current line contains relevant data
+			try:
+				# extract data if line contains data
+				if (line[1]) != '':
+					x.append((float(line[1]) + float(line[5]))/2.0)
+					y.append((float(line[2]) + float(line[6]))/2.0)
+					size.append((float(line[3]) + float(line[7]))/2.0)
+					time.append(int(float(line[0])))
+					trackertime.append(int(float(line[0])))
+			except:
+				message("line '%s' could not be parsed" % line)
+				continue # skip this line	
 	
 	# # # # #
 	# return
-	
-	return data
+	return data 
